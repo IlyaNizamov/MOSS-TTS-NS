@@ -15,6 +15,7 @@ import argparse
 import importlib.util
 import json
 import math
+import re
 import shutil
 import sys
 import time
@@ -36,7 +37,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from moss_tts_local.finetuning.common import load_jsonl_spec, normalize_audio_path_list
+from moss_tts_local.finetuning.common import load_jsonl, normalize_audio_path_list, resolve_jsonl_paths
 from moss_tts_local.finetuning.dataset import MossTTSSFTDataset
 from moss_tts_local.modeling_moss_tts import MossTTSDelayModel
 from moss_tts_local.processing_moss_tts import MossTTSDelayProcessor
@@ -367,6 +368,48 @@ def save_checkpoint(
     accelerator.wait_for_everyone()
 
 
+def shard_paths_for_rank(paths: List[Path], world_size: int, rank: int) -> tuple[List[Path], bool]:
+    if world_size <= 1:
+        return paths, False
+
+    shard_pattern = re.compile(r"\.rank(\d+)-of-(\d+)\.jsonl$")
+    parsed: List[tuple[Path, int, int]] = []
+    for path in paths:
+        match = shard_pattern.search(path.name)
+        if match is None:
+            return paths, False
+        shard_rank = int(match.group(1))
+        shard_world_size = int(match.group(2))
+        parsed.append((path, shard_rank, shard_world_size))
+
+    shard_world_sizes = {item[2] for item in parsed}
+    if len(shard_world_sizes) != 1:
+        return paths, False
+
+    selected = [path for path, shard_rank, _ in parsed if shard_rank % world_size == rank]
+    if not selected:
+        raise ValueError(
+            f"No shard assigned for rank={rank} world_size={world_size}. "
+            "Please check --train-jsonl shard files and distributed config."
+        )
+    return selected, True
+
+
+def load_jsonl_for_rank(
+    spec: str,
+    world_size: int,
+    rank: int,
+) -> tuple[List[Path], List[Dict[str, Any]], List[Path], bool]:
+    all_paths = resolve_jsonl_paths(spec)
+    rank_paths, using_pre_sharded_files = shard_paths_for_rank(
+        all_paths, world_size=world_size, rank=rank
+    )
+    records: List[Dict[str, Any]] = []
+    for path in rank_paths:
+        records.extend(load_jsonl(path))
+    return all_paths, records, rank_paths, using_pre_sharded_files
+
+
 def main() -> None:
     args = parse_args()
     validate_args(args)
@@ -388,13 +431,19 @@ def main() -> None:
     )
     accelerator.print(f"[{format_timestamp()}] [sft] global_batch_size={global_batch_formula}")
 
-    train_paths, records = load_jsonl_spec(args.train_jsonl)
+    train_paths, records, local_train_paths, using_pre_sharded_files = load_jsonl_for_rank(
+        args.train_jsonl,
+        world_size=accelerator.num_processes,
+        rank=accelerator.process_index,
+    )
     if not records:
         raise ValueError(f"No records found in {args.train_jsonl}.")
     accelerator.print(
         f"[{format_timestamp()}] [sft] distributed_type={accelerator.distributed_type} "
         f"num_processes={accelerator.num_processes} "
-        f"train_files={len(train_paths)} train_records={len(records)}"
+        f"using_pre_sharded_files={using_pre_sharded_files} "
+        f"train_files={len(train_paths)} local_train_files={len(local_train_paths)} "
+        f"local_train_records={len(records)}"
     )
 
     need_audio_tokenizer = processor_needs_audio_tokenizer(records)
@@ -447,6 +496,11 @@ def main() -> None:
         dataset,
         batch_size=args.per_device_batch_size,
         shuffle=True,
+        # In pre-sharded mode the dataloader is not wrapped by Accelerate, so
+        # there is no DistributedSampler to pad shorter shards.  Drop the last
+        # incomplete batch to guarantee every rank runs the same number of
+        # steps and avoids a DDP allreduce hang when shard sizes differ by one.
+        drop_last=using_pre_sharded_files,
         num_workers=args.num_workers,
         collate_fn=dataset.collate_fn,
     )
@@ -459,7 +513,12 @@ def main() -> None:
         eps=args.adam_eps,
     )
 
-    micro_batches_per_epoch = math.ceil(len(records) / global_micro_batch_size)
+    if using_pre_sharded_files:
+        # Inputs are already split by rank; do not divide by world_size again.
+        micro_batches_per_epoch = math.ceil(len(records) / args.per_device_batch_size)
+    else:
+        # A full/global dataset is loaded per process and then sharded by Accelerate.
+        micro_batches_per_epoch = math.ceil(len(records) / global_micro_batch_size)
     update_steps_per_epoch = math.ceil(micro_batches_per_epoch / args.gradient_accumulation_steps)
     max_train_steps = args.max_train_steps or (args.num_epochs * update_steps_per_epoch)
     warmup_steps = resolve_warmup_steps(args, max_train_steps)
@@ -477,12 +536,19 @@ def main() -> None:
         num_training_steps=max_train_steps,
     )
 
-    model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-        model,
-        optimizer,
-        train_dataloader,
-        lr_scheduler,
-    )
+    if using_pre_sharded_files:
+        model, optimizer, lr_scheduler = accelerator.prepare(
+            model,
+            optimizer,
+            lr_scheduler,
+        )
+    else:
+        model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+            model,
+            optimizer,
+            train_dataloader,
+            lr_scheduler,
+        )
 
     output_root = Path(args.output_dir)
     if accelerator.is_main_process:
