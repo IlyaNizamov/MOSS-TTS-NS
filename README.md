@@ -1,648 +1,443 @@
-# MOSS-TTS Family
+# MOSS-TTS-NS
 
-<br>
+Форк [MOSS-TTS](https://github.com/OpenMOSS/MOSS-TTS) с HTTP-сервером и скриптом автоматического развёртывания.
+Запуск через бэкенд llama.cpp без PyTorch (torch-free inference).
 
-<p align="center">
-  <img src="./assets/OpenMOSS_Logo.png" height="70" align="middle" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="./assets/mosi-logo.png" height="50" align="middle" />
-</p>
+---
 
+## Быстрый старт (скрипт)
 
+Скрипт `setup.sh` выполняет все шаги автоматически: клонирование, venv, зависимости, скачивание весов, сборка llama.cpp и C-bridge, тестовый инференс.
 
+### Подготовка
 
-<div align="center">
-  <a href="https://clawhub.ai/luogao2333/moss-tts-voice"><img src="https://img.shields.io/badge/🦞_OpenClaw-Skills-8A2BE2" alt="OpenClaw"></a>
-  <a href="https://huggingface.co/collections/OpenMOSS-Team/moss-tts"><img src="https://img.shields.io/badge/Huggingface-Models-orange?logo=huggingface&amp"></a>
-  <a href="https://modelscope.cn/collections/OpenMOSS-Team/MOSS-TTS"><img src="https://img.shields.io/badge/ModelScope-Models-lightgrey?logo=modelscope&amp"></a>
-  <a href="https://mosi.cn/#models"><img src="https://img.shields.io/badge/Blog-View-blue?logo=internet-explorer&amp"></a>
-  <a href="https://arxiv.org/abs/2603.18090"><img src="https://img.shields.io/badge/Arxiv-2603.18090-red?logo=Arxiv&amp"></a>
+1. Создайте токен на [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) (тип: Read)
+2. Примите условия доступа на страницах моделей (кнопка **"Agree and access repository"**):
+   - [https://huggingface.co/OpenMOSS-Team/MOSS-TTS-GGUF](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-GGUF)
+   - [https://huggingface.co/OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX](https://huggingface.co/OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX)
 
-  <a href="https://studio.mosi.cn"><img src="https://img.shields.io/badge/AIStudio-Try-green?logo=internet-explorer&amp"></a>
-  <a href="https://studio.mosi.cn/docs/moss-tts"><img src="https://img.shields.io/badge/API-Docs-00A3FF?logo=fastapi&amp"></a>
-  <a href="https://x.com/Open_MOSS"><img src="https://img.shields.io/badge/Twitter-Follow-black?logo=x&amp"></a>
-  <a href="https://discord.gg/Xf3aXddCjc"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&amp"></a>
-  <a href="./assets/wechat.jpg"><img src="https://img.shields.io/badge/WeChat-Join-07C160?logo=wechat&amp;logoColor=white" alt="WeChat"></a>
-</div>
-
-
-[English](README.md) | [简体中文](README_zh.md)
-
-
-MOSS‑TTS Family is an open‑source **speech and sound generation model family** from [MOSI.AI](https://mosi.cn/#hero) and the [OpenMOSS team](https://www.open-moss.com/). It is designed for **high‑fidelity**, **high‑expressiveness**, and **complex real‑world scenarios**, covering stable long‑form speech, multi‑speaker dialogue, voice/character design, environmental sound effects, and real‑time streaming TTS.
-
-## News
-* 2026.3.20: 📄 Our [technical report](https://arxiv.org/pdf/2603.18090) is now available on arXiv!
-* 2026.3.18: 🚀 Added a first-class MOSS-TTS `llama.cpp` implementation in the companion repository [`OpenMOSS/llama.cpp`](https://github.com/OpenMOSS/llama.cpp/tree/moss-tts-firstclass), including end-to-end docs and a runnable pipeline for GGUF backbone inference plus ONNX audio codec decoding. See the [first-class e2e guide](https://github.com/OpenMOSS/llama.cpp/blob/moss-tts-firstclass/docs/moss-tts-firstclass-e2e.md).
-* 2026.3.16: 📘 Added a tutorial on fine-tuning the MossTTSLocal architecture, suitable for MOSS-TTS-Local-Transformer!
-* 2026.3.12: 🚀 Added SGLang backend support for the `MossTTSDelay` architecture, enabling efficient inference for MOSS-TTS (Delay) and MOSS-SoundEffect, with around **3× faster** generation throughput!
-* 2026.3.11: 📘 Added a tutorial on fine-tuning the MossTTSDelay architecture, suitable for MOSS-TTS(Delay), MOSS-TTSD, MOSS-VoiceGenerator, and MOSS-SoundEffect!
-* 2026.3.10: ⚡️ Significantly optimized the VRAM usage of llama.cpp inference pipeline. Now 8B model fits onto 8GB GPUs!
-* 2026.3.4: 🚀 Added **PyTorch-free inference support** — enabling lightweight on-device deployment via **llama.cpp + ONNX Runtime**. Quantized **GGUF weights** are released at [OpenMOSS-Team/MOSS-TTS-GGUF](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-GGUF), and the **ONNX audio tokenizer** is available at [OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX](https://huggingface.co/OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX). See the [llama.cpp backend](#llamacpp-backend-torch-free-inference) for details.
-* 2026.3.4: 🎉 We add MOSS-TTS skills in [ClawHub](https://clawhub.ai) of 🦞 OpenClaw: [feishu-voice-tts](https://clawhub.ai/helloeveryworlds/feishu-voice-tts) and [moss-tts-voice](https://clawhub.ai/luogao2333/moss-tts-voice).
-* 2026.2.10: 🎉🎉🎉 We have released [MOSS-TTS Family](https://huggingface.co/collections/OpenMOSS-Team/moss-tts). Check our [Blog](https://mosi.cn/#models) for more details! Our **Huggingface Space** is here: [MOSS-TTS](https://huggingface.co/spaces/OpenMOSS-Team/MOSS-TTS), [MOSS-TTSD-v1.0](https://huggingface.co/spaces/OpenMOSS-Team/MOSS-TTSD-v1.0), [MOSS-VoiceGenerator](https://huggingface.co/spaces/OpenMOSS-Team/MOSS-VoiceGenerator).
-
-
-## Demo
-
-<div align="center">
-  <video src="https://gist.github.com/user-attachments/assets/fdce9f66-20ec-45e8-9615-89606ae2fbe8" width="70%" poster=""> </video>
-</div>
-
-## Contents
-
-- [Introduction](#introduction)
-- [Model Architecture](#model-architecture)
-- [Released Models](#released-models)
-- [Supported Languages](#supported-languages)
-- [Quickstart](#quickstart)
-  - [OpenClaw API Skills](#openclaw-api-skills)
-  - [Environment Setup](#environment-setup)
-  - [(Optional) Install FlashAttention 2](#optional-install-flashattention-2)
-  - [MOSS-TTS Basic Usage](#moss-tts-basic-usage)
-- [Fine-Tuning](#fine-tuning)
-- [llama.cpp Backend (Torch-Free Inference)](#llamacpp-backend-torch-free-inference)
-- [SGLang Backend (Accelerated Inference)](#sglang-backend-accelerated-inference)
-- [Evaluation](#evaluation)
-  - [MOSS-TTS](#moss-tts-seed-tts-eval)
-  - [MOSS-TTSD](#moss-ttsd-subjective--ttsd-eval)
-  - [MOSS-VoiceGenerator](#moss-voicegenerator-subjective)
-- [MOSS-Audio-Tokenizer](#moss-audio-tokenizer)
-  - [Introduction](#mat-intro)
-  - [Model Weights](#model-weights)
-  - [Objective Reconstruction Evaluation](#objective-reconstruction-evaluation)
-
-
-## Introduction
-
-<p align="center">
-  <img src="./assets/moss_tts_family.jpeg" width="85%" />
-</p>
-
-When a single piece of audio needs to **sound like a real person**, **pronounce every word accurately**, **switch speaking styles across content**, **remain stable over tens of minutes**, and **support dialogue, role‑play, and real‑time interaction**, a single TTS model is often not enough. The **MOSS‑TTS Family** breaks the workflow into five production‑ready models that can be used independently or composed into a complete pipeline.
-
-- **MOSS‑TTS**: The flagship production model featuring high fidelity and optimal zero-shot voice cloning. It supports **long-speech generation**, **fine-grained control over Pinyin, phonemes, and duration**, as well as **multilingual/code-switched synthesis**.
-- **MOSS‑TTSD**: A spoken dialogue generation model for expressive, multi-speaker, and ultra-long dialogues. The new **v1.0 version** achieves **industry-leading performance on objective metrics** and **outperformed top closed-source models like Doubao and Gemini 2.5-pro** in subjective evaluations. You can visit the [MOSS-TTSD repository](https://github.com/OpenMOSS/MOSS-TTSD) for details.
-- **MOSS‑VoiceGenerator**: An open-source voice design model capable of generating diverse voices and styles directly from text prompts, **without any reference speech**. It unifies voice design, style control, and synthesis, functioning independently or as a design layer for downstream TTS. Its performance **surpasses other top-tier voice design models in arena ratings**.
-- **MOSS‑TTS‑Realtime**: A multi-turn context-aware model for real-time voice agents. It uses incremental synthesis to ensure natural and coherent replies, making it **ideal for building low-latency voice agents when paired with text models**. The TTFB (Time To First Byte) of MOSS-TTS-Realtime reaches 180 ms, and the $T_{\text{LLM-first-sentence}} + T_{\text{MOSS-TTS-Realtime-TTFB}}$ is 377 ms.
-- **MOSS‑SoundEffect**: A content creation model specialized in **sound effect generation** with wide category coverage and controllable duration. It generates audio for natural environments, urban scenes, biological sounds, human actions, and musical fragments, suitable for film, games, and interactive experiences.
-
-
-## Model Architecture
-
-We train **MossTTSDelay** and **MossTTSLocal** as complementary baselines under one training/evaluation setup: **Delay** emphasizes long-context stability, inference speed, and production readiness, while **Local** emphasizes lightweight flexibility and strong objective performance for streaming-oriented systems. Together they provide reproducible references for deployment and research.
-
-**MossTTSRealtime** is not a third comparison baseline; it is a capability-driven design for voice agents. By modeling multi-turn context from both prior text and user acoustics, it delivers low-latency streaming speech that stays coherent and voice-consistent across turns.
-
-
-| Architecture  | Core Mechanism | Arch Details |
-|---|---|---|
-| `MossTTSDelay` |  Multi‑head parallel RVQ prediction with delay‑pattern scheduling | [![Arch Details](https://img.shields.io/badge/Model%20Card-View-blue?logo=markdown)](moss_tts_delay/README.md) |
-| `MossTTSLocal` | Time‑synchronous RVQ blocks with a depth transformer | [![Arch Details](https://img.shields.io/badge/Model%20Card-View-blue?logo=markdown)](moss_tts_local/README.md) |
-| `MossTTSRealtime` | Hierarchical text–audio inputs for realtime synthesis | [![Arch Details](https://img.shields.io/badge/Model%20Card-View-blue?logo=markdown)](moss_tts_realtime/README.md) |
-
-## Released Models
-
-
-| Model | Architecture | Size | Model Card | Hugging Face | ModelScope |
-|---|---|---:|---|---|---|
-| **MOSS-TTS** | `MossTTSDelay` | 8B | [![Model Card](https://img.shields.io/badge/Model%20Card-View-blue?logo=markdown)](docs/moss_tts_model_card.md) | [![Hugging Face](https://img.shields.io/badge/Huggingface-Model-orange?logo=huggingface)](https://huggingface.co/OpenMOSS-Team/MOSS-TTS) | [![ModelScope](https://img.shields.io/badge/ModelScope-Model-lightgrey?logo=modelscope)](https://modelscope.cn/models/openmoss/MOSS-TTS) |
-|  | `MossTTSLocal` | 1.7B | [![Model Card](https://img.shields.io/badge/Model%20Card-View-blue?logo=markdown)](docs/moss_tts_model_card.md) | [![Hugging Face](https://img.shields.io/badge/Huggingface-Model-orange?logo=huggingface)](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-Local-Transformer) | [![ModelScope](https://img.shields.io/badge/ModelScope-Model-lightgrey?logo=modelscope)](https://modelscope.cn/models/openmoss/MOSS-TTS-Local-Transformer) |
-| **MOSS‑TTSD‑V1.0** | `MossTTSDelay` | 8B | [![Model Card](https://img.shields.io/badge/Model%20Card-View-blue?logo=markdown)](docs/moss_ttsd_model_card.md) | [![Hugging Face](https://img.shields.io/badge/Huggingface-Model-orange?logo=huggingface)](https://huggingface.co/OpenMOSS-Team/MOSS-TTSD-v1.0) | [![ModelScope](https://img.shields.io/badge/ModelScope-Model-lightgrey?logo=modelscope)](https://modelscope.cn/models/openmoss/MOSS-TTSD-v1.0) |
-| **MOSS‑VoiceGenerator** | `MossTTSDelay` | 1.7B | [![Model Card](https://img.shields.io/badge/Model%20Card-View-blue?logo=markdown)](docs/moss_voice_generator_model_card.md) | [![Hugging Face](https://img.shields.io/badge/Huggingface-Model-orange?logo=huggingface)](https://huggingface.co/OpenMOSS-Team/MOSS-VoiceGenerator) | [![ModelScope](https://img.shields.io/badge/ModelScope-Model-lightgrey?logo=modelscope)](https://modelscope.cn/models/openmoss/MOSS-VoiceGenerator) |
-| **MOSS‑SoundEffect** | `MossTTSDelay` | 8B | [![Model Card](https://img.shields.io/badge/Model%20Card-View-blue?logo=markdown)](docs/moss_sound_effect_model_card.md) | [![Hugging Face](https://img.shields.io/badge/Huggingface-Model-orange?logo=huggingface)](https://huggingface.co/OpenMOSS-Team/MOSS-SoundEffect) | [![ModelScope](https://img.shields.io/badge/ModelScope-Model-lightgrey?logo=modelscope)](https://modelscope.cn/models/openmoss/MOSS-SoundEffect) |
-| **MOSS‑TTS‑Realtime** | `MossTTSRealtime` | 1.7B | [![Model Card](https://img.shields.io/badge/Model%20Card-View-blue?logo=markdown)](docs/moss_tts_realtime_model_card.md) | [![Hugging Face](https://img.shields.io/badge/Huggingface-Model-orange?logo=huggingface)](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-Realtime) | [![ModelScope](https://img.shields.io/badge/ModelScope-Model-lightgrey?logo=modelscope)](https://modelscope.cn/models/openmoss/MOSS-TTS-Realtime) |
-
-## Supported Languages
-
-MOSS-TTS, MOSS-TTSD and MOSS-TTS-Realtime currently supports **20 languages**:
-
-| Language | Code | Flag | Language | Code | Flag | Language | Code | Flag |
-|---|---|---|---|---|---|---|---|---|
-| Chinese | zh | 🇨🇳 | English | en | 🇺🇸 | German | de | 🇩🇪 |
-| Spanish | es | 🇪🇸 | French | fr | 🇫🇷 | Japanese | ja | 🇯🇵 |
-| Italian | it | 🇮🇹 | Hungarian | hu | 🇭🇺 | Korean | ko | 🇰🇷 |
-| Russian | ru | 🇷🇺 | Persian (Farsi) | fa | 🇮🇷 | Arabic | ar | 🇸🇦 |
-| Polish | pl | 🇵🇱 | Portuguese | pt | 🇵🇹 | Czech | cs | 🇨🇿 |
-| Danish | da | 🇩🇰 | Swedish | sv | 🇸🇪 | | | |
-| Greek | el | 🇬🇷 | Turkish | tr | 🇹🇷 |  |  |  |
-
-
-## Quickstart
-
-### OpenClaw API Skills
-
-We add MOSS-TTS skills in [ClawHub](https://clawhub.ai) of 🦞 OpenClaw. You can get your API key from [MOSI AI Studio](https://studio.mosi.cn).
-
-| Skill | Description | Install |
-|---|---|---|
-| [`feishu-voice-tts`](https://clawhub.ai/helloeveryworlds/feishu-voice-tts) | Send voice messages in Feishu | `clawhub install feishu-voice-tts` |
-| [`moss-tts-voice`](https://clawhub.ai/luogao2333/moss-tts-voice) | Call MOSS-TTS API to generate speech | `clawhub install moss-tts-voice` |
-
-### Environment Setup
-
-We recommend a clean, isolated Python environment with **Transformers 5.0.0** to avoid dependency conflicts.
-
-#### Using Conda
+### Запуск
 
 ```bash
-conda create -n moss-tts python=3.12 -y
-conda activate moss-tts
+bash setup.sh --hf-token hf_ваш_токен
 ```
 
-Install all required dependencies:
+### Параметры скрипта
+
+| Флаг | Описание |
+|------|----------|
+| `--install-dir DIR` | Каталог установки (по умолчанию `./moss-tts-setup`) |
+| `--hf-token TOKEN` | Токен Hugging Face (или через переменную `HF_TOKEN`) |
+| `--skip-cudnn` | Пропустить установку cuDNN (не потребует sudo) |
+| `--cpu-only` | Собрать llama.cpp без CUDA |
 
 ```bash
-git clone https://github.com/OpenMOSS/MOSS-TTS.git
-cd MOSS-TTS
-pip install --extra-index-url https://download.pytorch.org/whl/cu128 -e ".[torch-runtime]"
+# Установка в конкретную директорию
+bash setup.sh --install-dir /opt/moss --hf-token hf_abc123
+
+# Без sudo (cuDNN не будет установлен, ONNX-декодер будет работать на CPU)
+bash setup.sh --hf-token hf_abc123 --skip-cudnn
+
+# CPU-only сборка (без CUDA)
+bash setup.sh --hf-token hf_abc123 --cpu-only
 ```
 
-#### Using `uv`
+Скрипт идемпотентный — если что-то уже склонировано или собрано, этот шаг пропускается. В конце запускается тестовый инференс для проверки.
+
+---
+
+## Требования
+
+- **ОС**: Linux (Ubuntu 22.04 / 24.04)
+- **Python**: >= 3.10
+- **GPU**: NVIDIA с поддержкой CUDA, минимум 1 карта с 8+ ГБ VRAM (протестировано на RTX 5070 Ti 16 ГБ)
+- **CUDA Toolkit**: >= 12.x (протестировано на 12.9)
+- **cuDNN**: 9.x (для GPU-ускоренного ONNX-декодирования аудио)
+- **GCC / Clang**: для сборки C-bridge
+- **CMake**: >= 3.14
+- **Git**
+- **Аккаунт на Hugging Face**: для скачивания gated-моделей
+
+---
+
+## Ручная установка (пошагово)
+
+### Шаг 1. Клонирование репозитория
 
 ```bash
-# Install uv first: https://docs.astral.sh/uv/getting-started/installation/
-git clone https://github.com/OpenMOSS/MOSS-TTS.git
-cd MOSS-TTS
-uv venv --python 3.12 .venv
-source .venv/bin/activate
-uv pip install --torch-backend cu128 -e ".[torch-runtime]"
+git clone https://github.com/IlyaNizamov/MOSS-TTS-NS.git
+cd MOSS-TTS-NS
 ```
 
-#### (Optional) Install FlashAttention 2
-
-For better speed and lower GPU memory usage, you can install FlashAttention 2 if your hardware supports it.
-
-If you use Conda/pip:
+Инициализация submodule (аудио-токенизатор). Без него инференс упадёт с ошибкой `ModuleNotFoundError: No module named 'moss_audio_tokenizer.onnx'`:
 
 ```bash
-pip install --extra-index-url https://download.pytorch.org/whl/cu128 -e ".[torch-runtime,flash-attn]"
+git submodule update --init --recursive
 ```
 
-If your machine has limited RAM and many CPU cores, you can cap build parallelism:
+### Шаг 2. Создание виртуального окружения
 
 ```bash
-MAX_JOBS=4 pip install --extra-index-url https://download.pytorch.org/whl/cu128 -e ".[torch-runtime,flash-attn]"
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
 ```
 
-If you use `uv`:
+### Шаг 3. Установка зависимостей
+
+| Профиль | Команда | Для чего |
+|---------|---------|----------|
+| **ONNX** | `pip install -e ".[llama-cpp-onnx]"` | Рекомендуемый старт, сбалансированная производительность |
+| **TensorRT** | `pip install -e ".[llama-cpp-trt]"` | Максимальная скорость аудио-декодера |
+| **Torch-accelerated** | `pip install -e ".[llama-cpp-onnx,llama-cpp-torch]"` | GPU-ускоренные LM heads (~30x быстрее) |
 
 ```bash
-uv pip install --torch-backend cu128 -e ".[torch-runtime,flash-attn]"
-```
-
-If your machine has limited RAM and many CPU cores, you can cap build parallelism:
-
-```bash
-MAX_JOBS=4 uv pip install --torch-backend cu128 -e ".[torch-runtime,flash-attn]"
-```
-
-Notes:
-- Dependencies are managed in `pyproject.toml`, which currently pins `torch==2.9.1+cu128` and `torchaudio==2.9.1+cu128`.
-- In `uv`, `--torch-backend cu128` lets uv fetch compatible PyTorch CUDA wheels and resolve the rest from PyPI with the default safe index strategy.
-- If you need another backend, replace `cu128` with your target (for example, `cpu`, `cu126`).
-- If FlashAttention 2 fails to build on your machine, you can skip it and use the default attention backend.
-- FlashAttention 2 is only available on supported GPUs and is typically used with `torch.float16` or `torch.bfloat16`.
-
-
-<a id="moss-tts-basic-usage"></a>
-### MOSS‑TTS Basic Usage
-
-If you prefer Gradio demos, we provide 4 scripts for the main models:
-
-| Model | Script | Run |
-|---|---|---|
-| MOSS-TTS | [clis/moss_tts_app.py](clis/moss_tts_app.py) |
-| MOSS-TTSD | [clis/moss_ttsd_app.py](clis/moss_ttsd_app.py) | 
-| MOSS-VoiceGenerator | [clis/moss_voice_generator_app.py](clis/moss_voice_generator_app.py) |
-| MOSS-SoundEffect | [clis/moss_sound_effect_app.py](clis/moss_sound_effect_app.py) | 
-
-For the MOSS-TTS-Realtime Gradio demo, please refer to [MOSS-TTS-Realtime Model Card](docs/moss_tts_realtime_model_card.md)
-
-```python
-from pathlib import Path
-import importlib.util
-import torch
-import torchaudio
-from transformers import AutoModel, AutoProcessor
-# Disable the broken cuDNN SDPA backend
-torch.backends.cuda.enable_cudnn_sdp(False)
-# Keep these enabled as fallbacks
-torch.backends.cuda.enable_flash_sdp(True)
-torch.backends.cuda.enable_mem_efficient_sdp(True)
-torch.backends.cuda.enable_math_sdp(True)
-
-
-pretrained_model_name_or_path = "OpenMOSS-Team/MOSS-TTS"
-device = "cuda" if torch.cuda.is_available() else "cpu"
-dtype = torch.bfloat16 if device == "cuda" else torch.float32
-
-def resolve_attn_implementation() -> str:
-    # Prefer FlashAttention 2 when package + device conditions are met.
-    if (
-        device == "cuda"
-        and importlib.util.find_spec("flash_attn") is not None
-        and dtype in {torch.float16, torch.bfloat16}
-    ):
-        major, _ = torch.cuda.get_device_capability()
-        if major >= 8:
-            return "flash_attention_2"
-
-    # CUDA fallback: use PyTorch SDPA kernels.
-    if device == "cuda":
-        return "sdpa"
-
-    # CPU fallback.
-    return "eager"
-
-
-attn_implementation = resolve_attn_implementation()
-print(f"[INFO] Using attn_implementation={attn_implementation}")
-
-processor = AutoProcessor.from_pretrained(
-    pretrained_model_name_or_path,
-    trust_remote_code=True,
-)
-processor.audio_tokenizer = processor.audio_tokenizer.to(device)
-
-text_1 = "亲爱的你，\n你好呀。\n\n今天，我想用最认真、最温柔的声音，对你说一些重要的话。\n这些话，像一颗小小的星星，希望能在你的心里慢慢发光。\n\n首先，我想祝你——\n每天都能平平安安、快快乐乐。\n\n希望你早上醒来的时候，\n窗外有光，屋子里很安静，\n你的心是轻轻的，没有着急，也没有害怕。\n\n希望你吃饭的时候胃口很好，\n走路的时候脚步稳稳，\n晚上睡觉的时候，能做一个又一个甜甜的梦。\n\n我希望你能一直保持好奇心。\n对世界充满问题，\n对天空、星星、花草、书本和故事感兴趣。\n当你问“为什么”的时候，\n希望总有人愿意认真地听你说话。\n\n我也希望你学会温柔。\n温柔地对待朋友，\n温柔地对待小动物，\n也温柔地对待自己。\n\n如果有一天你犯了错，\n请不要太快责怪自己，\n因为每一个认真成长的人，\n都会在路上慢慢学会更好的方法。\n\n愿你拥有勇气。\n当你站在陌生的地方时，\n当你第一次举手发言时，\n当你遇到困难、感到害怕的时候，\n希望你能轻轻地告诉自己：\n“我可以试一试。”\n\n就算没有一次成功，也没有关系。\n失败不是坏事，\n它只是告诉你，你正在努力。\n\n我希望你学会分享快乐。\n把开心的事情告诉别人，\n把笑声送给身边的人，\n因为快乐被分享的时候，\n会变得更大、更亮。\n\n如果有一天你感到难过，\n我希望你知道——\n难过并不丢脸，\n哭泣也不是软弱。\n\n愿你能找到一个安全的地方，\n慢慢把心里的话说出来，\n然后再一次抬起头，看见希望。\n\n我还希望你能拥有梦想。\n这个梦想也许很大，\n也许很小，\n也许现在还说不清楚。\n\n没关系。\n梦想会和你一起长大，\n在时间里慢慢变得清楚。\n\n最后，我想送你一个最最重要的祝福：\n\n愿你被世界温柔对待，\n也愿你成为一个温柔的人。\n\n愿你的每一天，\n都值得被记住，\n都值得被珍惜。\n\n亲爱的你，\n请记住，\n你是独一无二的，\n你已经很棒了，\n而你的未来，\n一定会慢慢变得闪闪发光。\n\n祝你健康、勇敢、幸福，\n祝你永远带着笑容向前走。"
-text_2 = "We stand on the threshold of the AI era.\nArtificial intelligence is no longer just a concept in laboratories, but is entering every industry, every creative endeavor, and every decision. It has learned to see, hear, speak, and think, and is beginning to become an extension of human capabilities. AI is not about replacing humans, but about amplifying human creativity, making knowledge more equitable, more efficient, and allowing imagination to reach further. A new era, jointly shaped by humans and intelligent systems, has arrived."
-text_3 = "nin2 hao3，qing3 wen4 nin2 lai2 zi4 na3 zuo4 cheng2 shi4？"
-text_4 = "nin2 hao3，qing4 wen3 nin2 lai2 zi4 na4 zuo3 cheng4 shi3？"
-text_5 = "您好，请问您来自哪 zuo4 cheng2 shi4？"
-text_6 = "/həloʊ, meɪ aɪ æsk wɪtʃ sɪti juː ɑːr frʌm?/"
-
-# Use audio from ./assets/audio to avoid downloading from the cloud.
-ref_audio_1 = "https://speech-demo.oss-cn-shanghai.aliyuncs.com/moss_tts_demo/tts_readme_demo/reference_zh.wav"
-ref_audio_2 = "https://speech-demo.oss-cn-shanghai.aliyuncs.com/moss_tts_demo/tts_readme_demo/reference_en.m4a"
-
-conversations = [
-    # Direct TTS (no reference)
-    [processor.build_user_message(text=text_1)],
-    [processor.build_user_message(text=text_2)],
-    # Pinyin or IPA input
-    [processor.build_user_message(text=text_3)],
-    [processor.build_user_message(text=text_4)],
-    [processor.build_user_message(text=text_5)],
-    [processor.build_user_message(text=text_6)],
-    # Voice cloning (with reference)
-    [processor.build_user_message(text=text_1, reference=[ref_audio_1])],
-    [processor.build_user_message(text=text_2, reference=[ref_audio_2])],
-    # Duration control
-    [processor.build_user_message(text=text_2, tokens=325)],
-    [processor.build_user_message(text=text_2, tokens=600)],
-]
-
-model = AutoModel.from_pretrained(
-    pretrained_model_name_or_path,
-    trust_remote_code=True,
-    attn_implementation=attn_implementation,
-    torch_dtype=dtype,
-).to(device)
-model.eval()
-
-batch_size = 1
-
-save_dir = Path("inference_root")
-save_dir.mkdir(exist_ok=True, parents=True)
-sample_idx = 0
-with torch.no_grad():
-    for start in range(0, len(conversations), batch_size):
-        batch_conversations = conversations[start : start + batch_size]
-        batch = processor(batch_conversations, mode="generation")
-        input_ids = batch["input_ids"].to(device)
-        attention_mask = batch["attention_mask"].to(device)
-
-        outputs = model.generate(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            max_new_tokens=4096,
-        )
-
-        for message in processor.decode(outputs):
-            audio = message.audio_codes_list[0]
-            out_path = save_dir / f"sample{sample_idx}.wav"
-            sample_idx += 1
-            torchaudio.save(out_path, audio.unsqueeze(0), processor.model_config.sampling_rate)
-
-```
-
-For each model’s full usage, please refer to its corresponding model card.
-
-<a id="fine-tuning"></a>
-## Fine-Tuning
-
-Finetuning tutorials are organized by architecture.
-
-Currently available:
-
-- `MossTTSDelay` / `OpenMOSS-Team/MOSS-TTS`: [moss_tts_delay/finetuning/README.md](moss_tts_delay/finetuning/README.md)
-- `MossTTSLocal` / `OpenMOSS-Team/MOSS-TTS-Local-Transformer`: [moss_tts_local/finetuning/README.md](moss_tts_local/finetuning/README.md)
-
-Additional architecture-specific finetuning tutorials will be added under their corresponding directories.
-
-## llama.cpp Backend (Torch-Free Inference)
-
-For lightweight or edge deployment, MOSS-TTS supports a **torch-free** inference path using [llama.cpp](https://github.com/ggerganov/llama.cpp) for the Qwen3 backbone and ONNX Runtime / TensorRT for the audio tokenizer. No PyTorch installation required.
-
-We also maintain a newer first-class MOSS-TTS path in the companion repository [`OpenMOSS/llama.cpp`](https://github.com/OpenMOSS/llama.cpp/tree/moss-tts-firstclass). Unlike the legacy bridge backend documented below, it moves multi-channel embeddings, multi-head outputs, and delay-pattern decoding directly into `llama.cpp`.
-
-For that path, start from the [first-class e2e guide](https://github.com/OpenMOSS/llama.cpp/blob/moss-tts-firstclass/docs/moss-tts-firstclass-e2e.md).
-
-### Quick Start
-
-```bash
-# 1. Install (torch-free)
 pip install -e ".[llama-cpp-onnx]"
+```
 
-# 2. Download pre-quantized backbone + embedding/lm_head weights
-huggingface-cli download OpenMOSS-Team/MOSS-TTS-GGUF --local-dir weights/MOSS-TTS-GGUF
+### Шаг 4. Установка cuDNN 9
 
-# 3. Download ONNX audio tokenizer
-huggingface-cli download OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX --local-dir weights/MOSS-Audio-Tokenizer-ONNX
+ONNX Runtime использует cuDNN для GPU-ускоренного декодирования аудио. Без cuDNN декодер будет работать на CPU (медленнее, но работает).
 
-# 4. Build the C bridge (one-time, requires llama.cpp compiled from source)
-cd moss_tts_delay/llama_cpp && bash build_bridge.sh /path/to/llama.cpp && cd ../..
+```bash
+sudo apt-get update
+sudo apt-get install -y libcudnn9-cuda-12 libcudnn9-dev-cuda-12
+```
 
-# 5. Run inference
+Проверка: `ls /usr/lib/x86_64-linux-gnu/libcudnn.so.9*`
+
+> **Примечание**: первый запуск с GPU-декодером может быть медленным (прогрев ONNX Runtime). Последующие запуски работают быстро.
+
+### Шаг 5. Получение токена Hugging Face
+
+Модели MOSS-TTS на Hugging Face являются **gated** — для скачивания нужна авторизация.
+
+1. Зарегистрируйтесь на [huggingface.co](https://huggingface.co)
+2. Создайте токен: [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) (тип: Read)
+3. Примите условия доступа:
+   - [https://huggingface.co/OpenMOSS-Team/MOSS-TTS-GGUF](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-GGUF)
+   - [https://huggingface.co/OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX](https://huggingface.co/OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX)
+
+```bash
+export HF_TOKEN=hf_ваш_токен
+```
+
+### Шаг 6. Скачивание весов модели
+
+```bash
+python -c "
+from huggingface_hub import snapshot_download
+snapshot_download('OpenMOSS-Team/MOSS-TTS-GGUF', local_dir='weights/MOSS-TTS-GGUF')
+snapshot_download('OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX', local_dir='weights/MOSS-Audio-Tokenizer-ONNX')
+print('Done')
+"
+```
+
+> **Примечание**: `huggingface-cli download` может быть недоступен в некоторых версиях `huggingface_hub`. В этом случае используйте Python API как показано выше.
+
+### Шаг 7. Сборка llama.cpp
+
+```bash
+cd ..
+git clone --depth 1 https://github.com/ggml-org/llama.cpp.git
+cd llama.cpp
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON
+cmake --build build -j$(nproc)
+cd ..
+```
+
+> **Для CPU-only**: уберите флаг `-DGGML_CUDA=ON`.
+
+### Шаг 8. Сборка C-bridge
+
+```bash
+cd MOSS-TTS-NS
+bash moss_tts_delay/llama_cpp/build_bridge.sh ../llama.cpp
+```
+
+### Шаг 9. Запуск инференса
+
+```bash
 python -m moss_tts_delay.llama_cpp \
     --config configs/llama_cpp/default.yaml \
-    --text "Hello, world!" --output output.wav
+    --text "Hello, world!" \
+    --output output.wav
+```
 
-# 6. (Optional) Low-memory mode for 8 GB GPUs — loads/unloads components per stage
-python -m moss_tts_delay.llama_cpp \
+---
+
+## Потребление VRAM и запуск на одной GPU
+
+Квантованная модель (Q4_K_M) занимает ~4.7 ГБ, KV-кэш ~576 МБ, compute buffers ~500 МБ. Итого **~6 ГБ VRAM** — модель свободно помещается на одну карту с 8+ ГБ памяти.
+
+При наличии нескольких GPU llama.cpp автоматически распределит слои между ними. Чтобы ограничить одной картой:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -m moss_tts_delay.llama_cpp \
+    --config configs/llama_cpp/default.yaml \
+    --text "Hello, world!" \
+    --output output.wav
+```
+
+Для карт с 8 ГБ VRAM используйте low-memory конфиг:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -m moss_tts_delay.llama_cpp \
     --config configs/llama_cpp/trt-8gb.yaml \
-    --text "Hello, world!" --output output.wav
+    --text "Hello, world!" \
+    --output output.wav
 ```
 
-### Installation Profiles
+---
 
-| Profile | Install Command | Dependencies | Use Case |
-|---------|----------------|--------------|----------|
-| **Torch-free (ONNX)** | `pip install -e ".[llama-cpp-onnx]"` | numpy, onnxruntime-gpu, tokenizers | Recommended starting point |
-| **Torch-free (TRT)** | `pip install -e ".[llama-cpp-trt]"` | numpy, tensorrt, cuda-python | Maximum audio tokenizer speed (build engines yourself) |
-| **Torch-accelerated** | `pip install -e ".[llama-cpp-onnx,llama-cpp-torch]"` | + torch | GPU-accelerated LM heads (~30x faster) |
+## Конфигурационные файлы
 
-> **Want to convert weights yourself?** See the [conversion guide](moss_tts_delay/llama_cpp/conversion/README.md) for step-by-step instructions on extracting, converting, and quantizing MOSS-TTS weights with llama.cpp.
+Расположены в `configs/llama_cpp/`:
 
-### Model Weights
+| Файл | Описание |
+|------|----------|
+| `default.yaml` | ONNX аудио-бэкенд (рекомендуемый) |
+| `trt.yaml` | TensorRT аудио-бэкенд (максимальная скорость) |
+| `trt-8gb.yaml` | Staged loading для GPU с ограниченной памятью |
+| `cpu-only.yaml` | Полностью CPU |
 
-| Repository | Contents | Download |
-|-----------|----------|----------|
-| [`OpenMOSS-Team/MOSS-TTS-GGUF`](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-GGUF) | Q4_K_M backbone `.gguf`, `embeddings/` (`.npy`), `lm_heads/` (`.npy`), tokenizer | `huggingface-cli download OpenMOSS-Team/MOSS-TTS-GGUF --local-dir weights/MOSS-TTS-GGUF` |
-| [`OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX`](https://huggingface.co/OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX) | Encoder & decoder ONNX models | `huggingface-cli download OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX --local-dir weights/MOSS-Audio-Tokenizer-ONNX` |
+---
 
-> **Note:** We do **not** provide pre-built TensorRT engines, as they are tied to your specific GPU and TensorRT version. To use TRT, build engines from the ONNX models yourself — see `moss_audio_tokenizer/trt/build_engine.sh`.
+## HTTP-сервер (REST API)
 
-### Configuration
+MOSS-TTS можно запустить как HTTP-сервер и генерировать речь через POST-запросы.
 
-Four pre-built configs are provided in `configs/llama_cpp/`:
-
-- `default.yaml` — ONNX audio + GGUF backbone (recommended start)
-- `trt.yaml` — TensorRT audio + GGUF backbone (max throughput, user-built engines)
-- `trt-8gb.yaml` — Low-memory mode for 8 GB GPUs (staged loading, TRT audio)
-- `cpu-only.yaml` — fully CPU-based (no GPU required)
-
-Key config options:
-- `heads_backend: auto | numpy | torch` — LM heads computation backend
-- `audio_backend: onnx | trt | torch` — audio tokenizer backend
-- `low_memory: true | false` — staged loading for limited VRAM (loads/unloads encoder, backbone, decoder per stage)
-- `kv_cache_type_k / kv_cache_type_v` — KV cache quantization (e.g. `q8_0`, `q4_0`) to reduce VRAM
-- `flash_attn: auto | enabled | disabled` — flash attention for lower peak VRAM during prefill
-
-For full documentation, see [moss_tts_delay/llama_cpp/README.md](moss_tts_delay/llama_cpp/README.md).
-
-## SGLang Backend (Accelerated Inference)
-
-MOSS-TTS (Delay) supports running the fused MOSS-TTS and MOSS-Audio-Tokenizer model with the deeply extended [SGLang](https://github.com/OpenMOSS/sglang) from OpenMOSS, enabling efficient inference for audio generation.
-
-### Quick Start
+### Запуск сервера
 
 ```bash
-# 1. Clone the SGLang repository
-git clone https://github.com/OpenMOSS/sglang.git
-
-# 2. Install SGLang
-pip install -e ./sglang/python[all]
-
-# 3. (Optional) Fix the SGLang CuDNN compatibility error
-#    RuntimeError: CRITICAL WARNING: PyTorch 2.9.1 & CuDNN Compatibility Issue Detected
-pip install nvidia-cudnn-cu12==9.16.0.29
-
-# 4. Download the model and audio tokenizer weights
-huggingface-cli download OpenMOSS-Team/MOSS-TTS --local-dir weights/MOSS-TTS
-huggingface-cli download OpenMOSS-Team/MOSS-Audio-Tokenizer --local-dir weights/MOSS-Audio-Tokenizer
-
-# 5. Fuse the model and audio tokenizer weights
-python scripts/fuse_moss_tts_delay_with_codec.py --model-path weights/MOSS-TTS --codec-model-path weights/MOSS-Audio-Tokenizer --save-path weights/MOSS-TTS-Delay-With-Codec
-
-# 6. Start the service
-sglang serve --model-path weights/MOSS-TTS-Delay-With-Codec --delay-pattern --trust-remote-code
+source venv/bin/activate
+python server.py --config configs/llama_cpp/default.yaml
 ```
 
-> If the fused output directory already exists, you can append `--overwrite` to replace it directly, or confirm the overwrite interactively when prompted.
+Сервер стартует на `http://127.0.0.1:8000`. Загрузка модели занимает ~10–15 секунд.
 
-> **Note:** The first request after starting the service for the first time may trigger a lengthy compilation step. This is expected, not a bug, so please wait patiently.
+### Параметры сервера
 
-### Request and Response
+| Флаг | Описание |
+|------|----------|
+| `--config PATH` | Путь к YAML-конфигу (обязательный) |
+| `--host HOST` | Адрес привязки (по умолчанию `127.0.0.1`) |
+| `--port PORT` | Порт (по умолчанию `8000`) |
+| `--n-gpu-layers N` | Количество слоёв на GPU |
+| `--low-memory` | Режим экономии памяти |
+| `--reference PATH` | Путь к WAV-файлу с образцом голоса (24 kHz) — фиксирует голос для всех запросов |
+| `--seed N` | Random seed по умолчанию — фиксирует голос для всех запросов |
 
-#### MOSS-TTS (Delay)
+Примеры запуска:
 
 ```bash
-curl -X POST http://localhost:30000/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "text": "Added SGLang backend support for efficient inference.",
-    "audio_data": "https://cdn.jsdelivr.net/gh/OpenMOSS/MOSS-TTSD@main/legacy/v0.7/examples/zh_spk1_moon.wav",
-    "sampling_params": {
-      "max_new_tokens": 512,
-      "temperature": 1.7,
-      "top_p": 0.8,
-      "top_k": 25
-    }
-  }'
+# Доступ только локально
+python server.py --config configs/llama_cpp/default.yaml
+
+# Доступ из сети
+python server.py --config configs/llama_cpp/default.yaml --host 0.0.0.0 --port 8080
+
+# На одной GPU
+CUDA_VISIBLE_DEVICES=0 python server.py --config configs/llama_cpp/default.yaml
+
+# Фиксированный голос через seed
+python server.py --config configs/llama_cpp/default.yaml --seed 42
+
+# Клонирование голоса через reference audio
+python server.py --config configs/llama_cpp/default.yaml --reference voice_sample.wav
+
+# Режим экономии памяти (8 ГБ GPU)
+CUDA_VISIBLE_DEVICES=0 python server.py --config configs/llama_cpp/trt-8gb.yaml --low-memory
 ```
 
-- `text` denotes the text content to be synthesized; you can prepend `${token:25}` for token control, for example `${token:25}Hello World`
-- `audio_data` denotes the optional reference audio; if omitted, the model generates audio with a random timbre, and it can be either `<path-to-audio-file>` or `data:audio/wav;base64,{b64_audio}`, where `b64_audio` is the base64 string of a wav file.
+### Фиксация голоса
 
-#### MOSS-SoundEffect
+По умолчанию модель генерирует речь **разным голосом** при каждом запросе из-за случайного сэмплирования. Есть два способа зафиксировать голос:
+
+**Способ 1: Seed** — один seed = один голос. Попробуйте разные значения (42, 123, 777...) и выберите понравившийся:
 
 ```bash
-curl -X POST http://localhost:30000/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "text": "${token:125}${ambient_sound:a sports car roaring past on the highway.}",
-    "sampling_params": {
-      "max_new_tokens": 512,
-      "temperature": 1.5,
-      "top_p": 0.6,
-      "top_k": 50
-    }
-  }'
+# На уровне сервера (для всех запросов):
+python server.py --config configs/llama_cpp/default.yaml --seed 42
+
+# Или в конкретном запросе (переопределяет серверный):
+curl -X POST http://localhost:8000/tts \
+    -H "Content-Type: application/json" \
+    -d '{"text": "Hello!", "seed": 42}' \
+    --output speech.wav
 ```
 
-- `text` should contain only two tagged fields: `${token:125}` and `${ambient_sound:...}`, where the content after `${ambient_sound:...}` is a natural-language description of the target sound effect.
-- `${token:125}` is recommended for more stable generation.
-- Do not pass `audio_data`, or the model may go OOD.
+> Одинаковый seed + одинаковый текст = побайтово идентичный WAV.
 
-#### Response
+**Способ 2: Reference audio (клонирование голоса)** — передать WAV-образец нужного голоса (24 kHz):
+
+```bash
+python server.py --config configs/llama_cpp/default.yaml --reference voice_sample.wav
+```
+
+### API эндпоинты
+
+#### `GET /health` — проверка состояния
+
+```bash
+curl http://localhost:8000/health
+```
+
+Ответ:
 
 ```json
-{"text": "<wav-base64>", "...": "..."}
+{"status": "ok", "model": "MOSS-TTS (llama.cpp)", "sample_rate": 24000}
 ```
 
-The HTTP response is a JSON object and may contain multiple fields. The `.text` field stores the WAV base64 string for the generated audio. In most cases, you only need to extract that field and base64-decode it; for example, after saving the response as `response.json`, you can run `jq -r '.text' response.json | base64 -d -i > output.wav`.
+#### `POST /tts` — генерация речи
 
-## Evaluation
+Принимает JSON, возвращает WAV-файл.
 
-This section summarizes the **family‑level evaluation highlights** for MOSS‑TTS, MOSS-TTSD and MOSS‑VoiceGenerator. For full details, see each model’s model card.
+| Поле | Тип | Обязательный | Описание |
+|------|-----|:---:|----------|
+| `text` | string | да | Текст для синтеза (1–10000 символов) |
+| `language` | string | нет | Язык: `zh`, `en` и др. |
+| `instruction` | string | нет | Инструкция для генерации |
+| `quality` | string | нет | Качество генерации |
+| `max_new_tokens` | int | нет | Максимальное число шагов генерации (1–10000) |
+| `seed` | int | нет | Random seed для воспроизводимого голоса (переопределяет серверный `--seed`) |
+| `format` | string | нет | Формат ответа: `wav` (по умолчанию) или `raw` |
 
-### MOSS‑TTS
-MOSS‑TTS achieved state‑of‑the‑art results on the open‑source zero‑shot TTS benchmark `Seed‑TTS‑eval`, surpassing all open‑source models and rivaling leading closed‑source systems.
+### Примеры запросов
 
-| Model | Params | Open‑source | EN WER (%) ↓ | EN SIM (%) ↑ | ZH CER (%) ↓ | ZH SIM (%) ↑ |
-|---|---:|:---:|---:|---:|---:|---:|
-| DiTAR | 0.6B | ❌ | 1.69 | 73.5 | 1.02 | 75.3 |
-| FishAudio‑S1 | 4B | ❌ | 1.72 | 62.57 | 1.22 | 72.1 |
-| CosyVoice3 | 1.5B | ❌ | 2.22 | 72 | 1.12 | 78.1 |
-| Seed‑TTS |  | ❌ | 2.25 | 76.2 | 1.12 | 79.6 |
-| MiniMax‑Speech |  | ❌ | 1.65 | 69.2 | 0.83 | 78.3 |
-|  |  |  |  |  |  |  |
-| CosyVoice | 0.3B | ✅ | 4.29 | 60.9 | 3.63 | 72.3 |
-| CosyVoice2 | 0.5B | ✅ | 3.09 | 65.9 | 1.38 | 75.7 |
-| CosyVoice3 | 0.5B | ✅ | 2.02 | 71.8 | 1.16 | 78 |
-| F5‑TTS | 0.3B | ✅ | 2 | 67 | 1.53 | 76 |
-| SparkTTS | 0.5B | ✅ | 3.14 | 57.3 | 1.54 | 66 |
-| FireRedTTS | 0.5B | ✅ | 3.82 | 46 | 1.51 | 63.5 |
-| FireRedTTS‑2 | 1.5B | ✅ | 1.95 | 66.5 | 1.14 | 73.6 |
-| Qwen2.5‑Omni | 7B | ✅ | 2.72 | 63.2 | 1.7 | 75.2 |
-| FishAudio‑S1‑mini | 0.5B | ✅ | 1.94 | 55 | 1.18 | 68.5 |
-| IndexTTS2 | 1.5B | ✅ | 2.23 | 70.6 | 1.03 | 76.5 |
-| VibeVoice | 1.5B | ✅ | 3.04 | 68.9 | 1.16 | 74.4 |
-| HiggsAudio‑v2 | 3B | ✅ | 2.44 | 67.7 | 1.5 | 74 |
-| GLM-TTS | 1.5B | ✅ | 2.23 | 67.2 | 1.03 | 76.1 |
-| GLM-TTS-RL | 1.5B | ✅ | 1.91 | 68.1 | **0.89** | 76.4 |
-| VoxCPM | 0.5B | ✅ | 1.85 | 72.9 | 0.93 | 77.2 |
-| Qwen3‑TTS | 0.6B | ✅ | 1.68 | 70.39 | 1.23 | 76.4 |
-| Qwen3‑TTS | 1.7B | ✅ | **1.5** | 71.45 | 1.33 | 76.72 |
-|  |  |  |  |  |  |  |
-| **MossTTSDelay** | **8B** | ✅ | 1.84 | 70.86 | 1.37 | 76.98 |
-| **MossTTSLocal** | **1.7B** | ✅ | 1.93 | **73.28** | 1.44 | **79.62** |
+```bash
+# Простая генерация
+curl -X POST http://localhost:8000/tts \
+    -H "Content-Type: application/json" \
+    -d '{"text": "Hello, world!"}' \
+    --output speech.wav
 
-### MOSS‑TTSD
+# С фиксированным голосом (seed)
+curl -X POST http://localhost:8000/tts \
+    -H "Content-Type: application/json" \
+    -d '{"text": "Hello, world!", "seed": 42}' \
+    --output speech.wav
 
-#### Objective Evaluation
-We evaluate MOSS‑TTSD-v1.0 using three objective metrics: Speaker Attribution Accuracy (ACC), Speaker Similarity (SIM), and Word Error Rate (WER). Benchmarked against multiple open-source and closed-source models, the results show that MOSS‑TTSD-v1.0 consistently achieves either the best or second-best performance.
+# С указанием языка
+curl -X POST http://localhost:8000/tts \
+    -H "Content-Type: application/json" \
+    -d '{"text": "Привет, мир!", "language": "zh"}' \
+    --output speech.wav
 
-| Model | ZH - SIM | ZH - ACC | ZH - WER | EN - SIM | EN - ACC | EN - WER |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Comparison with Open-Source Models** | | | | | | |
-| **MOSS-TTSD-v1.0** | **0.7949** | **0.9587** | **0.0485** | **0.7326** | **0.9626** | 0.0988 |
-| MOSS-TTSD-v0.7 | 0.7423 | 0.9391 | 0.0517 | 0.6743 | 0.9266 | 0.1612 |
-| Vibevoice 7B | 0.7590 | 0.9222 | 0.0570 | 0.7140 | 0.9554 | **0.0946** |
-| Vibevoice 1.5 B | 0.7415 | 0.8798 | 0.0818 | 0.6961 | 0.9353 | 0.1133 |
-| FireRedTTS2 | 0.7383 | 0.9022 | 0.0768 | - | - | - |
-| Higgs Audio V2 | - | - | - | 0.6860 | 0.9025 | 0.2131 |
-| **Comparison with Proprietary Models** | | | | | | |
-| **MOSS-TTSD-v1.0 (elevenlabs_voice)** | **0.8165** | **0.9736** | 0.0391 | **0.7304** | **0.9565** | 0.1005 |
-| Eleven V3 | 0.6970 | 0.9653 | **0.0363** | 0.6730 | 0.9498 | **0.0824** |
-| | | | | | | |
-| **MOSS-TTSD-v1.0 (gemini_voice)** | - | - | - | **0.7893** | **0.9655** | 0.0984 |
-| gemini-2.5-pro-preview-tts | - | - | - | 0.6786 | 0.9537 | **0.0859** |
-| gemini-2.5-flash-preview-tts | - | - | - | 0.7194 | 0.9511 | 0.0871 |
-| | | | | | | |
-| **MOSS-TTSD-v1.0 (doubao_voice)** | **0.8226** | **0.9630** | 0.0571 | - | - | - |
-| Doubao_Podcast | 0.8034 | 0.9606 | **0.0472** | - | - | - |
+# С ограничением длины генерации
+curl -X POST http://localhost:8000/tts \
+    -H "Content-Type: application/json" \
+    -d '{"text": "Long text here...", "max_new_tokens": 5000}' \
+    --output speech.wav
 
-#### Subjective Evaluation
-For open-source models, annotators are asked to score each sample pair in terms of speaker attribution accuracy, voice similarity, prosody, and overall quality. Following the methodology of the LMSYS Chatbot Arena, we compute Elo ratings and confidence intervals for each dimension.
-![alt text](assets/VS_Open-Source_Models.jpg)
-
-For closed-source models, annotators are only asked to choose the overall preferred one in each pair, and we compute the win rate accordingly.
-![alt text](assets/VS_Proprietary_Models.png)
-
-
-### MOSS‑VoiceGenerator
-MOSS‑VoiceGenerator demonstrates strong subjective preference across **overall preference**, **instruction following**, and **naturalness**.
-
-<p align="center">
-  <img src="./assets/moss_voice_generator_winrate.png" width="70%" />
-</p>
-
-### MOSS‑TTS-Realtime
-We evaluated the TTFB (Time To First Byte) and RTF (Real-Time Factor) of MOSS-TTS-Realtime.
-
-Note: SDPA + torch.compile were enabled during testing. The following results are tested on a single L20 GPU. 
-
-| Model | TTFB (ms) | RTF |
-|-------------|-----------|-----|
-| **MOSS-TTS-Realtime** | 180（After warm up）| 0.51 |
-
-We deployed Qwen3.5-9B using vLLM to measure $T_{\text{LLM-first-sentence}}$. The time required to generate 12 tokens (the TTS prefill length) was 197 ms.
-
-$T_{\text{LLM-first-sentence}} + T_{\text{MOSS-TTS-Realtime-TTFB}} = 197ms + 180ms = 377ms$
-
-
-## MOSS-Audio-Tokenizer
-
-<a id="mat-intro"></a>
-### Introduction
-**MOSS-Audio-Tokenizer** serves as the unified discrete audio interface for the entire MOSS-TTS Family. It is based on the **Cat** (**C**ausal **A**udio **T**okenizer with **T**ransformer) architecture—a 1.6-billion-parameter, "CNN-free" homogeneous audio tokenizer built entirely from Causal Transformer blocks.
-
-- **Unified Discrete Bridge**: It acts as the shared backbone for MOSS-TTS, MOSS-TTSD, MOSS-VoiceGenerator, MOSS-SoundEffect, and MOSS-TTS-Realtime, providing a consistent audio representation across the family.
-- **Extreme Compression & High Fidelity**: It compresses 24kHz raw audio into a remarkably low frame rate of 12.5Hz. Utilizing a 32-layer Residual Vector Quantizer (RVQ), it supports high-fidelity reconstruction across variable bitrates from 0.125kbps to 4kbps.
-- **Massive-Scale General Audio Training**: Trained from scratch on 3 million hours of diverse data (speech, sound effects, and music), the model achieves state-of-the-art reconstruction among open source audio tokenizers.
-- **Native Streaming Design**: The pure Causal Transformer architecture is specifically designed for scalability and low-latency streaming inference, enabling real-time production workflows.
-
-To learn more about setup, advanced usage, and evaluation metrics, please visit the [MOSS-Audio-Tokenizer Repository](https://github.com/OpenMOSS/MOSS-Audio-Tokenizer)
-
-<p align="center">
-  <img src="./assets/arch_moss_audio_tokenizer.png" alt="MOSS Audio Tokenizer architecture" width="100%" />
-  Architecture of MOSS Audio Tokenizer
-</p>
-
-### Model Weights
-
-| Model | Hugging Face | ModelScope |
-|:-----:|:------------:|:----------:|
-| **MOSS-Audio-Tokenizer** | [![Hugging Face](https://img.shields.io/badge/Huggingface-Model-orange?logo=huggingface)](https://huggingface.co/OpenMOSS-Team/MOSS-Audio-Tokenizer) | [![ModelScope](https://img.shields.io/badge/ModelScope-Model-lightgrey?logo=modelscope)](https://modelscope.cn/models/openmoss/MOSS-Audio-Tokenizer) |
-
-### Objective Reconstruction Evaluation
-
-We compare **MOSS Audio Tokenizer** with open-source audio tokenizers on the LibriSpeech test-clean subset using SIM, STOI, PESQ-NB, and PESQ-WB. Bitrate is controlled by varying the number of RVQ codebooks during decoding, and MOSS Audio Tokenizer leads reconstruction quality among open-source audio tokenizers at comparable 0–4 kbps bitrates.
-
-<p align="center">
-  <img src="./assets/evaluation_moss_audio_tokenizer.png" alt="LibriSpeech objective metrics for audio tokenizers" width="90%" />
-</p>
-
-
-## 📚 More Information
-###  🌟 Community Projects
-The MOSS-TTS community has been growing rapidly, and we’re delighted to showcase some outstanding projects and features built by community members:
-- **[ComfyUI-MOSS-TTS](https://github.com/richservo/comfyui-moss-tts)** A MOSS-TTS extension for ComfyUI.
-- **[MOSS-TTS-OpenAI](https://github.com/dasilva333/moss-tts-openai)** An OpenAI-compatible TTS API for MOSS-TTS.
-- **[AnyPod](https://github.com/rulerman/AnyPod)** A podcast generation tool using MOSS-TTS/MOSS-TTSD as the backend.
-
-
-## LICENSE
-
-Models in MOSS-TTS Family are licensed under the Apache License 2.0.
-
-## Citation
-
-```bibtex
-@misc{gong2026mossttstechnicalreport,
-      title={MOSS-TTS Technical Report}, 
-      author={Yitian Gong and Botian Jiang and Yiwei Zhao and Yucheng Yuan and Kuangwei Chen and Yaozhou Jiang and Cheng Chang and Dong Hong and Mingshu Chen and Ruixiao Li and Yiyang Zhang and Yang Gao and Hanfu Chen and Ke Chen and Songlin Wang and Xiaogui Yang and Yuqian Zhang and Kexin Huang and ZhengYuan Lin and Kang Yu and Ziqi Chen and Jin Wang and Zhaoye Fei and Qinyuan Cheng and Shimin Li and Xipeng Qiu},
-      year={2026},
-      eprint={2603.18090},
-      archivePrefix={arXiv},
-      primaryClass={cs.SD},
-      url={https://arxiv.org/abs/2603.18090}, 
-}
+# Raw PCM (float32, 24kHz, mono)
+curl -X POST http://localhost:8000/tts \
+    -H "Content-Type: application/json" \
+    -d '{"text": "Test", "format": "raw"}' \
+    --output speech.pcm
 ```
 
-## Star History
+**Из Python:**
 
-[![Star History Chart](https://api.star-history.com/svg?repos=OpenMOSS/MOSS-TTS&type=date&legend=top-left)](https://www.star-history.com/#OpenMOSS/MOSS-TTS&type=date&legend=top-left)
+```python
+import requests
+import soundfile as sf
+import io
+
+response = requests.post(
+    "http://localhost:8000/tts",
+    json={"text": "Hello from Python!", "seed": 42},
+)
+response.raise_for_status()
+
+data, sr = sf.read(io.BytesIO(response.content))
+print(f"Duration: {len(data)/sr:.2f}s, Sample rate: {sr}")
+sf.write("output.wav", data, sr)
+```
+
+### Swagger UI
+
+Интерактивная документация: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+## Возможные проблемы
+
+### `ModuleNotFoundError: No module named 'moss_audio_tokenizer.onnx'`
+
+Не инициализирован git submodule:
+
+```bash
+git submodule update --init --recursive
+```
+
+### `InvalidRequirement: Parse error` при `pip install`
+
+Устаревший pip:
+
+```bash
+pip install --upgrade pip
+```
+
+### `GatedRepoError: 401 / 403`
+
+- Убедитесь, что `HF_TOKEN` установлен: `echo $HF_TOKEN`
+- Убедитесь, что вы приняли условия на страницах моделей на Hugging Face
+
+### `libcudnn.so.9: cannot open shared object file`
+
+Не установлен cuDNN 9:
+
+```bash
+sudo apt-get install -y libcudnn9-cuda-12
+```
+
+### Первый запуск с CUDA-декодером очень медленный
+
+Это нормально — ONNX Runtime прогревает GPU. Последующие запуски в рамках одного процесса быстрые.
+
+### Предупреждения о TensorRT
+
+```
+EP Error ... Please install TensorRT libraries ...
+Falling back to ['CUDAExecutionProvider', 'CPUExecutionProvider']
+```
+
+Это не ошибка. ONNX Runtime пытается использовать TensorRT, не находит его и переключается на CUDA.
+
+---
+
+## Структура файлов после установки
+
+```
+.
+├── llama.cpp/                          # Собранный llama.cpp
+│   └── build/bin/libllama.so
+├── MOSS-TTS-NS/
+│   ├── venv/                           # Виртуальное окружение
+│   ├── moss_audio_tokenizer/           # Git submodule
+│   ├── moss_tts_delay/
+│   │   └── llama_cpp/
+│   │       ├── libbackbone_bridge.so   # Собранный C-bridge
+│   │       └── ...
+│   ├── configs/llama_cpp/
+│   │   ├── default.yaml
+│   │   ├── trt.yaml
+│   │   ├── trt-8gb.yaml
+│   │   └── cpu-only.yaml
+│   ├── weights/
+│   │   ├── MOSS-TTS-GGUF/             # Квантованные веса backbone
+│   │   └── MOSS-Audio-Tokenizer-ONNX/ # ONNX encoder/decoder
+│   ├── server.py                       # HTTP-сервер (FastAPI)
+│   ├── setup.sh                        # Скрипт автоустановки
+│   └── output.wav                      # Сгенерированное аудио
+```
+
+---
+
+## Ссылки
+
+- Оригинальный репозиторий: [https://github.com/OpenMOSS/MOSS-TTS](https://github.com/OpenMOSS/MOSS-TTS)
+- GGUF веса: [https://huggingface.co/OpenMOSS-Team/MOSS-TTS-GGUF](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-GGUF)
+- ONNX аудио-токенизатор: [https://huggingface.co/OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX](https://huggingface.co/OpenMOSS-Team/MOSS-Audio-Tokenizer-ONNX)
+- llama.cpp: [https://github.com/ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
